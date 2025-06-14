@@ -54,7 +54,7 @@ void splitBlock(int order){
     buddy1 -> alloc = 0;
 
     //buddy 2 after
-    Node* buddy2 = (Node*)((byte*) buddy1 + halfSize);
+    Node* buddy2 = (Node*)((unsigned char*) buddy1 + halfSize); // changed byte to unsigned char, was getting error of it being ambiguous not sure if this will fix the problem 
     buddy2 -> size = halfSize - sizeof(Node);
     buddy2 -> alloc = 0;
 
@@ -91,7 +91,7 @@ void initBuddyAlloc(){
     initialized = true;
 }
 
-void *buddyMalloc(int request_memory){
+void *buddyMalloc(int request_memory){ // returns pointer
 
     if (!initialized) initBuddyAlloc();
     if (request_memory <= 0 || request_memory > MEMORYSIZE){
@@ -128,19 +128,59 @@ void *buddyMalloc(int request_memory){
 
     //4. return ptr to mem after header
     printFreeList(); //DEBUGGING, CAN REMOVE LATER
-    return (void*)((byte*) block + sizeof(Node));
-
+    return (void*)((unsigned char*) block + sizeof(Node)); // changed byte to unsigned char, was getting error of it being ambiguous not sure if this will fix the problem 
+                                                          // pointer that it returns 
     void *p = NULL; //dummy statement only
 
     return p; //dummy statement only
 } 
 
-int buddyFree(void *p){
+int buddyFree(void *p){  // we point to the variable we created that was passed through buddyfree which pointed to the start of the access memory (this line return (void*)((unsigned char*) block + sizeof(Node)); ) - using linked list
 
-   ///////////////////////////////////
-   //put your implementation here
+    if (p == NULL) return 0; // error handling, if ptr sent through buddymalloc is null exit
+    int order = MIN_ORDER; // currently 5 = 32bytes
 
-   return 1; //dummy statement only
+    Node* block = (Node*)((unsigned char*)p - sizeof(Node)); // since the pointer is pointing at the start of the access memory, we need to move it back to the sizeof(node) because we need to know what the size allocation status is 
+    block -> alloc = 0; // update alloc to 0, 1 = block is currenty allocated, 0 = block isn't allocated, freeing so block isn't allocated inside nodes
+
+    while (order < MAX_ORDER) { // 32 bytes < 1mb
+    uintptr_t block_address = (uintptr_t)block; // uintptr_t, so we can do xor caluclations to the memory address, block is the pointer to the node ->  Node* block = (Node*)((unsigned char*)p - sizeof(Node));
+    uintptr_t buddy_address = block_address ^ (1ULL << order); // same here, but we do an XOR caluclation where we caluclate the buddy_address (1ULL - 0001 in binary, << bitwise shift left which equals 0001 -> 100000 which the binary of that is 32)
+    Node* buddy = (Node*)buddy_address; // buddy address converted back into a pointer to the node
+
+    if (buddy < (Node*)wholememory || buddy >= (Node*)((unsigned char*)wholememory + MEMORYSIZE)) {
+        break; // checks if buddy address is inside the memory range otherwise break
+    }
+    if (buddy->alloc || buddy->size != block->size) {
+        break; // checks if buddy size matches if not break
+    }
+    if (buddy->previous) {
+        buddy->previous->next = buddy->next; // updates next pointer
+    } else {
+        free_lists[order] = buddy->next; // otherwise its the first node
+    }
+    if (buddy->next) {
+        buddy->next->previous = buddy->previous; // if we move onto next node, remove previous pointer (buddy)
+    }
+    if (buddy < block) { // ensure it points to the lowest address
+        block = buddy;
+    }
+    block->size = (1ULL << (order + 1)) - sizeof(Node); // merge blocks
+    block->alloc = 0;
+    block->next = nullptr;
+    block->previous = nullptr;
+    order++; 
+}
+block->next = free_lists[order];
+if (free_lists[order]) {
+    free_lists[order]->previous = block;
+}
+free_lists[order] = block;
+
+printFreeList(); //DEBUGGING, CAN REMOVE LATER
+
+return 1;
+
 }
 
 //------------- Debugging Functions -----------------
@@ -163,3 +203,9 @@ void printFreeList() {
     printf("-------------------------\n");
 }
 //------------- Can comment out/remove -----------------
+
+// comments
+// ptr = buddyMalloc(size) = user inputs the size, then buddymalloc allocates a memory block large enough to hold it
+// it will then return (void*)((unsigned char*)block + sizeof(Node)); void is the pointer that points to the start of the accesses the memory
+// The address of a block's "buddy" is equal to the bitwise exclusive OR (XOR) of the block's address and the block's size. 
+// block sizes are 2^order, buddy block size differs exactly between 2^order e.g/ block size is 0x1000 2^5, buddy address will be 0x1000 XOR 32
