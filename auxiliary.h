@@ -77,7 +77,7 @@ using namespace std;
      #define USE_SIMULATION_2 //default
 //---------------------------------------
 // (2) Simple Test
-    // #define RUN_SIMPLE_TEST
+    //#define RUN_SIMPLE_TEST
 //---------------------------------------
 
 /////////////////////////////////////////////////////////////////

@@ -45,7 +45,7 @@ Node *wholememory;
 long long int MEMORYSIZE;
 
 #define NUMBEROFPAGES  8192//7200  
-// #define DEBUG_MODE //enable to see more details
+#define DEBUG_MODE //enable to see more details
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -56,9 +56,10 @@ long long int MEMORYSIZE;
 //---------------------------------------
 //(1) use built-in C functions
 // change the following lines to test the real malloc and free
-const string strategy = "malloc"; //enable this to test the system MALLOC & FREE
-#define MALLOC malloc //enable this to test the system MALLOC & FREE
-#define FREE free //enable this to test the system MALLOC & FREE
+const string strategy = "Buddy System"; //enable this to test the system MALLOC & FREE
+#define USE_BUDDY_SYSTEM  //enable this to test the system MALLOC & FREE
+#define MALLOC buddyMalloc //enable this to test the system MALLOC & FREE
+#define FREE buddyFree //enable this to test the system MALLOC & FREE
 
 //---------------------------------------
 //(2) use user-defined functions

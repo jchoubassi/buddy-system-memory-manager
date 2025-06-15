@@ -22,6 +22,8 @@
 Node *free_lists[MAX_ORDER + 1] = {nullptr};
 bool initialized = false;
 
+void printFreeList(); //debugging function can be removed later
+
 /////////////////////////////////////////////////////////////////////////////////
 
 //get order for size
@@ -130,9 +132,6 @@ void *buddyMalloc(int request_memory){ // returns pointer
     printFreeList(); //DEBUGGING, CAN REMOVE LATER
     return (void*)((unsigned char*) block + sizeof(Node)); // changed byte to unsigned char, was getting error of it being ambiguous not sure if this will fix the problem 
                                                           // pointer that it returns 
-    void *p = NULL; //dummy statement only
-
-    return p; //dummy statement only
 } 
 
 int buddyFree(void *p){  // we point to the variable we created that was passed through buddyfree which pointed to the start of the access memory (this line return (void*)((unsigned char*) block + sizeof(Node)); ) - using linked list
@@ -186,7 +185,7 @@ return 1;
 //------------- Debugging Functions -----------------
 //Called in buddyMalloc if need to remove
 void printFreeList() {
-    printf("----- Free Lists -----\n");
+    printf("\n--- Free List (debug print) ---\n");
     for (int order = MIN_ORDER; order <= MAX_ORDER; ++order) {
         printf("Order %2d (Block size: %6lld): ", order, 1LL << order);
         Node* current = free_lists[order];
@@ -200,7 +199,7 @@ void printFreeList() {
         }
         printf("NULL\n");
     }
-    printf("-------------------------\n");
+    printf("------------------------------\n");
 }
 //------------- Can comment out/remove -----------------
 
