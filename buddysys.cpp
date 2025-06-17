@@ -14,15 +14,15 @@
 #include <cstdio>
 #include <cstring>
 #include <cmath>
-
-#define MIN_ORDER 5 // 32 bytes, adjust ?
-#define MAX_ORDER 20 //adjust
-#define HEADER_SIZE sizeof(Node)
+#include <fstream>
+#include <iostream>
 
 Node *free_lists[MAX_ORDER + 1] = {nullptr};
 bool initialized = false;
+int failure_counts[MAX_ORDER + 1] = { 0 };
 
 void printFreeList(); //debugging function can be removed later
+void printFreeListToFile(const std::string& filename); //debugging function can be removed later
 
 /////////////////////////////////////////////////////////////////////////////////
 
@@ -39,7 +39,7 @@ int getOrderSize(long long int getSize){
 }
 
 void splitBlock(int order){
-    if (order <= MIN_ORDER || order > MAX_ORDER || !free_lists[order])
+    if (order <= MIN_ORDER || order > MAX_ORDER || free_lists[order] == nullptr)
         return;
     
     Node* bigBlock = free_lists[order];
@@ -104,10 +104,15 @@ void *buddyMalloc(int request_memory){ // returns pointer
 
     //1. find smalest avail block >= desiredOrder
     int currentOrder = desiredOrder;
+
     while (currentOrder <= MAX_ORDER && !free_lists[currentOrder]) {
         currentOrder++;
     }
     if (currentOrder > MAX_ORDER) {
+        int failedOrder = getOrderSize(request_memory); //DEBUGGING, CAN REMOVE LATER
+        if (failedOrder <= MAX_ORDER) { //DEBUGGING, CAN REMOVE LATER
+            failure_counts[failedOrder]++; //DEBUGGING, CAN REMOVE LATER
+		} //DEBUGGING, CAN REMOVE LATER
         return nullptr; // No available block found
     }
 
@@ -129,58 +134,77 @@ void *buddyMalloc(int request_memory){ // returns pointer
     block -> previous = nullptr; //reset prev ptr
 
     //4. return ptr to mem after header
-    printFreeList(); //DEBUGGING, CAN REMOVE LATER
+    //printFreeList(); //DEBUGGING, CAN REMOVE LATER
+    //printFreeListToFile("log.txt"); //DEBUGGING, CAN REMOVE LATER
     return (void*)((unsigned char*) block + sizeof(Node)); // changed byte to unsigned char, was getting error of it being ambiguous not sure if this will fix the problem 
                                                           // pointer that it returns 
 } 
 
-int buddyFree(void *p){  // we point to the variable we created that was passed through buddyfree which pointed to the start of the access memory (this line return (void*)((unsigned char*) block + sizeof(Node)); ) - using linked list
-
+int buddyFree(void* p) // we point to the variable we created that was passed through buddyfree which pointed to the start of the access memory (this line return (void*)((unsigned char*) block + sizeof(Node)); ) - using linked list
+{
     if (p == NULL) return 0; // error handling, if ptr sent through buddymalloc is null exit
-    int order = MIN_ORDER; // currently 5 = 32bytes
 
     Node* block = (Node*)((unsigned char*)p - sizeof(Node)); // since the pointer is pointing at the start of the access memory, we need to move it back to the sizeof(node) because we need to know what the size allocation status is 
-    block -> alloc = 0; // update alloc to 0, 1 = block is currenty allocated, 0 = block isn't allocated, freeing so block isn't allocated inside nodes
+    block->alloc = 0; // update alloc to 0, 1 = block is currenty allocated, 0 = block isn't allocated, freeing so block isn't allocated inside nodes
 
-    while (order < MAX_ORDER) { // 32 bytes < 1mb
-    uintptr_t block_address = (uintptr_t)block; // uintptr_t, so we can do xor caluclations to the memory address, block is the pointer to the node ->  Node* block = (Node*)((unsigned char*)p - sizeof(Node));
-    uintptr_t buddy_address = block_address ^ (1ULL << order); // same here, but we do an XOR caluclation where we caluclate the buddy_address (1ULL - 0001 in binary, << bitwise shift left which equals 0001 -> 100000 which the binary of that is 32)
-    Node* buddy = (Node*)buddy_address; // buddy address converted back into a pointer to the node
+    long long int totalSize = block->size + sizeof(Node); // total size includes header
+    int order = MIN_ORDER; // currently 5 = 32bytes
+    while ((1LL << order) < totalSize && order <= MAX_ORDER) { // find the correct order
+        order++;
+    }
 
-    if (buddy < (Node*)wholememory || buddy >= (Node*)((unsigned char*)wholememory + MEMORYSIZE)) {
-        break; // checks if buddy address is inside the memory range otherwise break
+    while (order < MAX_ORDER) { // try merge while not reaching max block size
+        uintptr_t block_address = (uintptr_t)block; // uintptr_t, so we can do xor caluclations to the memory address, block is the pointer to the node ->  Node* block = (Node*)((unsigned char*)p - sizeof(Node));
+        uintptr_t buddy_address = block_address ^ (1ULL << order); // same here, but we do an XOR caluclation where we caluclate the buddy_address (1ULL - 0001 in binary, << bitwise shift left which equals 0001 -> 100000 which the binary of that is 32)
+        Node* buddy = (Node*)buddy_address; // buddy address converted back into a pointer to the node
+
+        if (buddy < (Node*)wholememory || buddy >= (Node*)((unsigned char*)wholememory + MEMORYSIZE)) {
+            break; // checks if buddy address is inside the memory range otherwise break
+        }
+
+        if (buddy->alloc || buddy->size != block->size) {
+            break; // checks if buddy size matches if not break
+        }
+
+        // qill unlink buddy from free list
+        if (buddy->previous) {
+            buddy->previous->next = buddy->next; // updates next pointer
+        }
+        else {
+            free_lists[order] = buddy->next; // otherwise its the first node
+        }
+        if (buddy->next) {
+            buddy->next->previous = buddy->previous; // if we move onto next node, remove previous pointer (buddy)
+        }
+
+        if (buddy < block) {
+            block = buddy; // ensure it points to the lowest address
+        }
+
+        block->size = (1ULL << (order + 1)) - sizeof(Node);  // merge blocks
+        block->alloc = 0;
+        block->next = nullptr;
+        block->previous = nullptr;
+        order++; // move to next order after merging
     }
-    if (buddy->alloc || buddy->size != block->size) {
-        break; // checks if buddy size matches if not break
+
+    // Insert block into free list (sorted by address to help future merges)
+    Node* curr = free_lists[order];
+    Node* prev = nullptr;
+    while (curr && curr < block) {
+        prev = curr;
+        curr = curr->next;
     }
-    if (buddy->previous) {
-        buddy->previous->next = buddy->next; // updates next pointer
-    } else {
-        free_lists[order] = buddy->next; // otherwise its the first node
-    }
-    if (buddy->next) {
-        buddy->next->previous = buddy->previous; // if we move onto next node, remove previous pointer (buddy)
-    }
-    if (buddy < block) { // ensure it points to the lowest address
-        block = buddy;
-    }
-    block->size = (1ULL << (order + 1)) - sizeof(Node); // merge blocks
-    block->alloc = 0;
-    block->next = nullptr;
-    block->previous = nullptr;
-    order++; 
+
+    block->next = curr;
+    block->previous = prev;
+    if (curr) curr->previous = block;
+    if (prev) prev->next = block;
+    else free_lists[order] = block;
+
+    return 1;
 }
-block->next = free_lists[order];
-if (free_lists[order]) {
-    free_lists[order]->previous = block;
-}
-free_lists[order] = block;
 
-printFreeList(); //DEBUGGING, CAN REMOVE LATER
-
-return 1;
-
-}
 
 //------------- Debugging Functions -----------------
 //Called in buddyMalloc if need to remove
@@ -201,6 +225,28 @@ void printFreeList() {
     }
     printf("------------------------------\n");
 }
+
+void printFreeListToFile(const std::string& filename) {
+    std::ofstream out(filename, std::ios::app);
+    if (!out) return;
+
+    out << "\n--- Free List (debug print) ---\n";
+    for (int order = MIN_ORDER; order <= MAX_ORDER; ++order) {
+        out << "Order " << order << " (Block size: " << (1LL << order) << "): ";
+        Node* current = free_lists[order];
+        if (!current) {
+            out << "[empty]\n";
+            continue;
+        }
+        while (current) {
+            out << "[addr: " << current << " | size: " << current->size << "] -> ";
+            current = current->next;
+        }
+        out << "NULL\n";
+    }
+    out << "------------------------------\n";
+}
+
 //------------- Can comment out/remove -----------------
 
 // comments

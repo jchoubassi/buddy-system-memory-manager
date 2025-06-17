@@ -44,8 +44,8 @@ Node *wholememory;
 
 long long int MEMORYSIZE;
 
-#define NUMBEROFPAGES  8192//7200  
-#define DEBUG_MODE //enable to see more details
+#define NUMBEROFPAGES  7169//8192//7200  
+//#define DEBUG_MODE //enable to see more details
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -100,7 +100,18 @@ int main() {
       n[i]=0;     // initially nothing is allocated
    }
    
-///////////////////////////////////////////////////////////
+// ================== TEST CONFIG ==================
+
+#if defined(RUN_SIMPLE_TEST) && defined(RUN_COMPLETE_TEST)
+#error "You can't enable both RUN_SIMPLE_TEST and RUN_COMPLETE_TEST. Pick only one."
+#endif
+
+#if !defined(RUN_SIMPLE_TEST) && !defined(RUN_COMPLETE_TEST)
+#define RUN_COMPLETE_TEST  // default
+#endif
+
+// ================== END CONFIG ===================
+
 //---------------------------------------
 // WHICH TEST ROUTINE?
 //---------------------------------------
@@ -300,7 +311,8 @@ long long int totalSizeOfNodes=0;
 
 #ifdef RUN_COMPLETE_TEST  
    cout << "\n\tExecuting " << NO_OF_ITERATIONS << " rounds of combinations of memory allocation and deallocation..." << endl;
-    
+   std::cout << "Test has started!" << std::endl;
+
    for(i=0;i<NO_OF_ITERATIONS;i++) {
 
     #ifdef DEBUG_MODE
@@ -320,13 +332,13 @@ long long int totalSizeOfNodes=0;
       }
       size=randomsize(); // pick a random size
       #ifdef DEBUG_MODE
-        cout << "\tPick random size to allocate: " << size << endl;
+        printf("\tPick random size to allocate: %d\n", size);
       #endif
         
       n[k]=(unsigned char *)MALLOC(size); // do the allocation
       if(n[k] != NULL){
-         #ifdef DEBUG_MODE
-            cout << "\tallocated memory of size: " << size << endl;   
+        #ifdef DEBUG_MODE
+          printf("\tallocated memory of size: %d\n", size);
          #endif   
          s[k]=size; // remember the size
 
@@ -336,8 +348,8 @@ long long int totalSizeOfNodes=0;
 
       } else {
          // cout << "\tFailed to allocate memory of size: " << size << endl;   
-         cout << "\tFailed to allocate memory of size: " << size << " at iteration #" << i  << endl;
-      }    
+          printf("\tFailed to allocate memory of size: %d at iteration #%d\n", size, i);
+      }
       
    }
 #endif
@@ -380,9 +392,14 @@ long long int totalSizeOfNodes=0;
   std::cout << "\n\tTime elapsed: " << time_elapsed.count() / 1e6 << " seconds" << std::endl;
   std::cout << "\tTime elapsed: " << time_elapsed.count() << " microseconds" << std::endl;
   printf("----------------------------------------------------------------");
-  
- 
 
+  //FOR DEBUGGING PURPOSES TO SEE THE MEMORY USAGE
+  printf("\n---<< Allocation Failures by Block Order >>---\n");
+  for (int i = MIN_ORDER; i <= MAX_ORDER; ++i) {
+      if (failure_counts[i] > 0)
+          printf("Order %2d (%8lld bytes): %d failures\n", i, (1LL << i), failure_counts[i]);
+  }
+  printf("------------------------------------------------\n");
 
    return 0;
 }

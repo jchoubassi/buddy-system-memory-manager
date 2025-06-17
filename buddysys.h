@@ -34,11 +34,17 @@ typedef struct llist Node;
 
 extern Node *wholememory;
 
+#define MIN_ORDER 5
+#define MAX_ORDER 20
+#define HEADER_SIZE sizeof(Node)
+
+extern int failure_counts[MAX_ORDER + 1];
+
 ///////////////////////////////////////////////////////////////////////////////////
 
 void *buddyMalloc(int request_memory); 
 int buddyFree(void *p);
-
+void printFreeList();
 
 
 

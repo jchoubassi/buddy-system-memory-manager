@@ -94,7 +94,7 @@ using namespace std;
 // machine is very fast or very slow to get sensible times
 // but when you submit please put them back to these values.
 #define NO_OF_POINTERS 2000
-#define NO_OF_ITERATIONS 200000
+#define NO_OF_ITERATIONS 20000
 
 extern unsigned seed;
 
