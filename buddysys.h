@@ -13,40 +13,33 @@
 #ifndef __BUDDYSYS_H__
 #define __BUDDYSYS_H__
 
-
 #include "auxiliary.h"
 
-extern long long int MEMORYSIZE;
+typedef unsigned char byte;  // shorthand for byte type
 
-
-typedef unsigned char byte;// shorter, replace cast to (char *) with cast to (byte *)
-
-
-
-struct llist { long long int size;   //size of the block (ONLY for data, this size does not consider the Node size! (so it is same as s[k])
-               int alloc;  //0 is free, 1 means allocated
-               struct llist * next; //next component
-               struct llist * previous; //previous component
+struct llist {
+    long long int size;      // size of block (data only, excludes Node header)
+    int alloc;               // 0 = free, 1 = allocated
+    struct llist* next;      // pointer to next block
+    struct llist* previous;  // pointer to previous block
 };
 
+typedef struct llist Node; // Node structure for linked list
 
-typedef struct llist Node;
+extern Node* wholememory; // Pointer to the start of the whole memory block
+extern long long int MEMORYSIZE; // Total size of the memory block
+extern long long int WHOLEMEMORY_BLOCKSIZE; // Size of the whole memory block excluding the header
 
-extern Node *wholememory;
+#define MIN_ORDER 5 // Minimum order size 
+#define MAX_ORDER 25 // Maximum order size 
+#define NUMBEROFPAGES 8192 // Number of pages in the memory block
+#define HEADER_SIZE sizeof(Node) // Size of the header for each block
 
-#define MIN_ORDER 5
-#define MAX_ORDER 20
-#define HEADER_SIZE sizeof(Node)
+extern int failure_counts[MAX_ORDER + 1]; // Array to count allocation failures for each order size
 
-extern int failure_counts[MAX_ORDER + 1];
+void* buddyMalloc(int request_memory); // Allocate memory using Buddy System
+int buddyFree(void* p); // Free allocated memory
+void printFreeList(); // Print the free list of memory blocks
+int getOrderSize(long long int getSize); // Get the order size for a given size
 
-///////////////////////////////////////////////////////////////////////////////////
-
-void *buddyMalloc(int request_memory); 
-int buddyFree(void *p);
-void printFreeList();
-int getOrderSize(long long int getSize);
-
-
-
-#endif
+#endif 
