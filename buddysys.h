@@ -45,7 +45,7 @@ extern int failure_counts[MAX_ORDER + 1];
 void *buddyMalloc(int request_memory); 
 int buddyFree(void *p);
 void printFreeList();
-
+int getOrderSize(long long int getSize);
 
 
 
