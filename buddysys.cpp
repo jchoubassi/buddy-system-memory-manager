@@ -45,30 +45,26 @@ void splitBlock(int order){
     Node* bigBlock = free_lists[order];
     free_lists[order] = bigBlock->next;
     
-    if (bigBlock -> next)
-        bigBlock->next->previous = nullptr;
+    if (bigBlock -> next) bigBlock->next->previous = nullptr;
     
-    long long int halfSize = (1LL << (order - 1));
+    size_t halfSize = (1ULL << (order - 1));
 
     //buddy 1
     Node* buddy1 = bigBlock;
-    buddy1 -> size = halfSize - sizeof(Node);
-    buddy1 -> alloc = 0;
-
     //buddy 2 after
-    Node* buddy2 = (Node*)((unsigned char*) buddy1 + halfSize); // changed byte to unsigned char, was getting error of it being ambiguous not sure if this will fix the problem 
-    buddy2 -> size = halfSize - sizeof(Node);
-    buddy2 -> alloc = 0;
+    Node* buddy2 = (Node*)((byte*)buddy1 + halfSize);
+
+    buddy1->size = buddy2->size = halfSize - sizeof(Node);
+    buddy1->alloc = buddy2->alloc = 0;
 
     //link buddies
-    buddy1 -> next = buddy2;
-    buddy1 -> previous = nullptr;
-    buddy2 -> next = free_lists[order - 1];
+    buddy1->next = buddy2;
+    buddy1->previous = nullptr;
 
-    if(buddy2 -> next)
-        buddy2 -> next -> previous = buddy2;
-    
-    buddy2 -> previous = buddy1;
+    buddy2->next = free_lists[order - 1];
+    buddy2->previous = buddy1;
+
+    if(buddy2 -> next)buddy2 -> next -> previous = buddy2;
     free_lists[order - 1] = buddy1;
 }
 
@@ -108,6 +104,7 @@ void *buddyMalloc(int request_memory){ // returns pointer
     while (currentOrder <= MAX_ORDER && !free_lists[currentOrder]) {
         currentOrder++;
     }
+
     if (currentOrder > MAX_ORDER) {
         int failedOrder = getOrderSize(request_memory); //DEBUGGING, CAN REMOVE LATER
         if (failedOrder <= MAX_ORDER) { //DEBUGGING, CAN REMOVE LATER
@@ -116,8 +113,14 @@ void *buddyMalloc(int request_memory){ // returns pointer
         return nullptr; // No available block found
     }
 
+
     //2. split larger block to desired order
     while (currentOrder > desiredOrder) {
+        long long int blockSize = (1LL << currentOrder);
+        long long int neededSize = request_memory + sizeof(Node);
+		// don't split anymore if next level is too small -used to reduce fragmentation issues 
+        if (blockSize / 2 < neededSize) break;
+
         splitBlock(currentOrder);
         currentOrder--;
     }
@@ -162,7 +165,18 @@ int buddyFree(void* p) // we point to the variable we created that was passed th
             break; // checks if buddy address is inside the memory range otherwise break
         }
 
-        if (buddy->alloc || buddy->size != block->size) {
+		// Check if buddy is in the free list
+        bool buddyInFreeList = false;
+        Node* iter = free_lists[order];
+        while (iter) {
+            if (iter == buddy) {
+                buddyInFreeList = true;
+                break;
+            }
+            iter = iter->next;
+        }
+
+        if (!buddyInFreeList || buddy->alloc || buddy->size != block->size) {
             break; // checks if buddy size matches if not break
         }
 
@@ -204,7 +218,6 @@ int buddyFree(void* p) // we point to the variable we created that was passed th
 
     return 1;
 }
-
 
 //------------- Debugging Functions -----------------
 //Called in buddyMalloc if need to remove

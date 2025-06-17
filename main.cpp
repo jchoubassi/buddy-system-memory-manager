@@ -31,8 +31,6 @@
 //     https://docs.microsoft.com/en-nz/windows/win32/memory/memory-protection-constants
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-
 #include "auxiliary.h"
 #include "buddysys.h"
 
@@ -45,7 +43,7 @@ Node *wholememory;
 long long int MEMORYSIZE;
 
 #define NUMBEROFPAGES  7169//8192//7200  
-//#define DEBUG_MODE //enable to see more details
+#define DEBUG_MODE //enable to see more details
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -370,14 +368,12 @@ long long int totalSizeOfNodes=0;
    cout << "          << " << strategy << " PERFORMANCE REPORT >>" << endl;
    cout << "========================================================" << endl;
 
-
 #ifndef USE_BUDDY_SYSTEM
   // Get the memory usage after running the process
   size_t finalMemory = getMemoryUsage();
 
   // Compute the memory used by the process
   size_t memoryUsed = finalMemory - initialMemory;
-
 
   printf("\nFinal ");
   printMemoryUsage(finalMemory);
