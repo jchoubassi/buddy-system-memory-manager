@@ -61,49 +61,33 @@ using namespace std;
 
 
 ////////////////////////////////////////////////////////////////
-//----------------------------------------
-// RUN WHICH TEST? RUN_SIMPLE_TEST or RUN_COMPLETE_TEST ()
-//----------------------------------------
-// (1) Complete test
-  #define RUN_COMPLETE_TEST //default
+// Test selection
+////////////////////////////////////////////////////////////////
 
-   //------------------------
-   //pick one
-   //------------------------
-   //(A) Simulation #1 
-    // #define USE_SIMULATION_1
-   
-   //(B) Simulation #2 //bigger memory block requests
-     #define USE_SIMULATION_2 //default
-//---------------------------------------
-// (2) Simple Test
-    //#define RUN_SIMPLE_TEST
-//---------------------------------------
+// Default: Run complete test
+#define RUN_COMPLETE_TEST
+
+// Pick one simulation
+// #define USE_SIMULATION_1
+#define USE_SIMULATION_2
+
+// To run simple test instead, uncomment:
+// #define RUN_SIMPLE_TEST
 
 /////////////////////////////////////////////////////////////////
 
-////////////////////////////////////////////////////////////////
-
-
-
-
-// the following is fixed by the OS
-// you are not allowed to change it
-#define PAGESIZE 4096
-// you may want to change the following lines if your
-// machine is very fast or very slow to get sensible times
-// but when you submit please put them back to these values.
-#define NO_OF_POINTERS 2000
-#define NO_OF_ITERATIONS 200000
+// Fixed constants (do not change)
+#define PAGESIZE 4096 // the following is fixed by the OS you are not allowed to change it
+#define NO_OF_POINTERS 2000 // can change during testing but when you submit please put them back to these values.
+#define NO_OF_ITERATIONS 20000 // can change during testing but when you submit please put them back to these values.
 
 extern unsigned seed;
-
 
 #define WIDTH 7
 #define DIV 1024
 
 ////////////////////////////////////////////////////////////////////////////////////
-// you are not allowed to change the following functions
+// Function declarations (do not change)
 
 void show_page_size();
 void printMemoryUsage(size_t memory);
@@ -111,19 +95,19 @@ size_t getMemoryUsage();
 
 #if defined __unix__ || defined __APPLE__
   
-  void* Virtual_Alloc(size_t size);
+void* Virtual_Alloc(size_t size);
 
 #endif
 
+void* allocpages(int n);
+int freepages(void* p);
 
-void  *allocpages(int n);
-int freepages(void *p);
-
-void *mymalloc(int n);
-int myfree(void *p);
+void* mymalloc(int n);
+int myfree(void* p);
 
 int myrand();
 int randomsize();
+
 //---
 
 
