@@ -81,6 +81,15 @@ const string strategy = "Buddy System";
 #else
 #error "No strategy selected!"
 #endif
+
+//---------------------------------------
+// OTHER DEFINITIONS
+//---------------------------------------
+// to select SIMPLE or COMPLETE test, go to Auxiliary.h and uncomment the desired test
+// to select the simulation, go to Auxiliary.h and uncomment the desired simulation
+// to select the number of iterations, go to Auxiliary.h and change the NO_OF_ITERATIONS value
+// to select the number of pages, go to BuddySys.h and change the NO_OF_PAGES value
+// to select the MIN_ORDER and MAX_ORDER, go to BuddySys.h and change the MIN_ORDER and MAX_ORDER values
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -189,12 +198,13 @@ const int NUM_OF_REQUESTS = 5;
 char actions[] = { 'm', 'm', 'm', 'f', 'f' };
 int requests[] = { 13, 3, 110, 3, 13 };
 int pointer_index[] = { 0, 1, 2, 1, 0 };
+bool allocation_results[NUM_OF_REQUESTS] = { false };
 
 //======================================================================================= 
     
-  printf("STARTING SIMPLE TEST...\n");
+  printf("\nSTARTING SIMPLE TEST...\n");
 
-  printf("\nExecuting %d rounds of combinations of memory allocation and deallocation...\n", NO_OF_ITERATIONS);
+  printf("\nExecuting %d rounds of combinations of memory allocation and deallocation...\n", NUM_OF_REQUESTS);
   
   for(int r=0; r < NUM_OF_REQUESTS; r++){
 #ifdef DEBUG_MODE
@@ -208,13 +218,17 @@ int pointer_index[] = { 0, 1, 2, 1, 0 };
 
 // case 'm' for malloc
         case 'm':
-            cout << "\n======>REQUEST: n[" << k << "] = MALLOC(" << size << ") =======\n\n";  
+#ifdef DEBUG_MODE
+            cout << "\n======>REQUEST: n[" << k << "] = MALLOC(" << size << ") =======\n\n";
+#endif   
             n[k]=(unsigned char *)MALLOC(size); // do the allocation
             if(n[k] != NULL){
                 s[k]=size; // remember the size
                 totalAllocatedBytes = totalAllocatedBytes + s[k];
                 totalSizeOfNodes = totalSizeOfNodes + sizeof(Node);
-
+                total_success_count++;
+                total_allocation_size += size;
+                allocation_results[r] = true;
 #ifdef DEBUG_MODE
                 cout << "\t\tSuccessfully allocated memory of size: " << size << endl;
                 printf("\n\t\t\t\t << MALLOC() >> relative address: %8ld size: %8d  (Node: %8ld Nodesize: %8d)\n",
@@ -231,14 +245,14 @@ int pointer_index[] = { 0, 1, 2, 1, 0 };
             break;
 // case 'f' for free       
         case 'f':
+#ifdef DEBUG_MODE
             cout << "\n======>REQUEST: FREE(n[" << k << "]) =======\n\n";
-            
+#endif 
             if(n[k]) { // if it was allocated then free it
                 if ( (n[k][0]) != (unsigned char) k)// check that the stuff we wrote has not changed
                     printf("\t\t==>Error when checking first byte! in block %d \n",k);
                 if(s[k]>1 && (n[k][s[k]-1])!=(unsigned char) k )//(n[k]-s[k]-k))
                     printf("\t\t==>Error when checking last byte! in block %d \n",k);
-
 #ifdef DEBUG_MODE
                 cout << "\n======>REQUEST: FREE(" << hex << n[k] << ") =======\n\n";
                 printf("\n\t\t\t\t << FREE() >> relative address: %8ld size: %8d  (Node: %8ld Nodesize: %8d)\n",
@@ -252,7 +266,20 @@ int pointer_index[] = { 0, 1, 2, 1, 0 };
             break;
       }
   }
+
+  int failed_allocs = 0;
+  int total_allocs = 0;
+  for (int i = 0; i < NUM_OF_REQUESTS; ++i) {
+      if (actions[i] == 'm') {
+          total_allocs++;
+          if (!allocation_results[i])
+              failed_allocs++;
+      }
+  }
+
+
 cout << "\nSIMPLE TEST FINISHED\n\n";
+
 #endif
 
 ////////////////////////////////////////////////////////
@@ -261,7 +288,7 @@ cout << "\nSIMPLE TEST FINISHED\n\n";
 
 #ifdef RUN_COMPLETE_TEST  
 
-  printf("STARTING COMPLETE TEST...\n");
+  printf("\nSTARTING COMPLETE TEST...\n");
 
   printf("\nExecuting %d rounds of combinations of memory allocation and deallocation...\n", NO_OF_ITERATIONS);
 
@@ -318,7 +345,7 @@ cout << "\nSIMPLE TEST FINISHED\n\n";
 #endif 
       }    
    }
-   cout << "COMPLETE TEST FINISHED\n\n";
+   cout << "\nCOMPLETE TEST FINISHED\n\n";
 #endif
 
 //---------------------------------------
@@ -339,6 +366,21 @@ cout << "\nSIMPLE TEST FINISHED\n\n";
    cout << "          << " << upper_strategy << " PERFORMANCE REPORT >>" << endl;
    cout << "========================================================" << endl;
 
+#ifdef RUN_SIMPLE_TEST
+// --------- Simple System Report ---------
+printf("\n---<< RESULTS >>---------------------------------------------\n");
+std::cout << "\tTime elapsed: " << time_elapsed.count() / 1e6 << " seconds" << std::endl;
+std::cout << "\tTime elapsed: " << time_elapsed.count() << " microseconds" << std::endl;
+std::cout << "\n\tSuccessful allocations: " << total_success_count;
+std::cout << "\n\tFailed allocations: " << failed_allocs;
+std::cout << "\n\tTotal allocations: " << total_allocs;
+if (total_success_count > 0)
+std::cout << "\n\tAverage allocation size: " << (total_allocation_size / total_success_count) << " bytes";
+printf("\n----------------------------------------------------------------\n");
+
+#endif
+
+#ifdef RUN_COMPLETE_TEST 
 // --------- Our Buddy System Report ---------
 #if defined(USE_BUDDY_SYSTEM)
    printf("\n---<< RESULTS >>---------------------------------------------");
@@ -384,6 +426,7 @@ cout << "\nSIMPLE TEST FINISHED\n\n";
 
 #endif
 
+#endif
    return 0;
 }
 
